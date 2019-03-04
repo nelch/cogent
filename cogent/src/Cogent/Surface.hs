@@ -14,7 +14,7 @@
 
 module Cogent.Surface
   ( module Cogent.Surface
-  , module Cogent.DataLayout.Surface
+  , module Cogent.Dargent.Surface
   ) where
 
 import Cogent.Common.Syntax
@@ -31,7 +31,7 @@ import Data.Traversable
 import qualified Data.Map as M
 import Text.Parsec.Pos
 
-import Cogent.DataLayout.Surface
+import Cogent.Dargent.Surface
 
 type DocString = String
 
