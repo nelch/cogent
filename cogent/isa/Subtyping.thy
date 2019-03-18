@@ -92,6 +92,84 @@ inductive type_lub :: "kind env \<Rightarrow> type \<Rightarrow> type \<Rightarr
 | glb_tunit  : "K \<turnstile> TUnit \<leftarrow> TUnit \<sqinter> TUnit"
 
 
+
+lemma type_lub_type_glb_drop_impl_drop:
+  assumes 
+    "K \<turnstile> a :\<kappa> {D}"
+    "K \<turnstile> b :\<kappa> {D}"
+  shows
+  "K \<turnstile> c \<leftarrow> a \<squnion> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
+  "K \<turnstile> c \<leftarrow> a \<sqinter> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
+  using assms
+proof (induct rule: type_lub_type_glb.inducts)
+  case (lub_tfun K t t1 t2 u u1 u2)
+  then show ?case
+    apply -
+    apply (unfold kinding_def)
+    apply (rule conjI)
+     apply (erule conjE)+
+     apply (unfold type_wellformed_pretty_def)
+
+
+
+
+
+  sorry
+next
+  case (lub_tprim p p1 p2 K)
+  then show ?case sorry
+next
+  case (lub_trecord K ts ts1 ts2 s s1 s2)
+  then show ?case sorry
+next
+  case (lub_tprod K t t1 t2 u u1 u2)
+  then show ?case sorry
+next
+  case (lub_tsum K ts ts1 ts2)
+  then show ?case sorry
+next
+  case (lub_tunit K)
+  then show ?case sorry
+next
+  case (glb_tvar n n1 n2 K)
+  then show ?case
+next
+  case (glb_tvarb n n1 n2 K)
+  then show ?case sorry
+next
+  case (glb_tcon n n1 n2 s s1 s2 ts ts1 ts2 K)
+  then show ?case sorry
+next
+  case (glb_tfun K t t1 t2 u u1 u2)
+  then show ?case sorry
+next
+  case (glb_trecord K ts ts1 ts2 s s1 s2)
+  then show ?case
+(*
+    apply -
+    apply (clarsimp simp add: list_all3_conv_all_nth kinding_defs)
+    apply (rule conjI)
+     apply (simp add: list_all_length)
+*)
+    sorry
+next
+  case (glb_tsum K ts ts1 ts2)
+  then show ?case
+(*
+    apply -
+    apply (simp add: kinding_defs list_all_def list_all3_conv_all_nth)
+    apply (erule conjE)+
+    apply (rule conjI)
+    apply (clarsimp simp add: List.in_listsp_conv_set)
+    apply (case_tac "b = Checked")
+     apply simp
+    apply (case_tac "b = Unchecked")
+     apply (simp, metis fst_conv in_set_conv_nth snd_conv)
+    apply (blast intro: variant_state.exhaust)
+*)
+    sorry
+  qed (simp add: kinding_simps)+
+
 lemma type_lub_type_glb_wellformed:
   assumes
     "K \<turnstile> t1 wellformed"
