@@ -100,21 +100,18 @@ lemma type_lub_type_glb_drop_impl_drop:
   shows
   "K \<turnstile> c \<leftarrow> a \<squnion> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
   "K \<turnstile> c \<leftarrow> a \<sqinter> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
-  using assms
 proof (induct rule: type_lub_type_glb.inducts)
+case (lub_tvar n n1 n2 K)
+  then show ?case sorry
+next
+  case (lub_tvarb n n1 n2 K)
+  then show ?case sorry
+next
+  case (lub_tcon n n1 n2 s s1 s2 ts ts1 ts2 K)
+  then show ?case sorry
+next
   case (lub_tfun K t t1 t2 u u1 u2)
-  then show ?case
-    apply -
-    apply (unfold kinding_def)
-    apply (rule conjI)
-     apply (erule conjE)+
-     apply (unfold type_wellformed_pretty_def)
-
-
-
-
-
-  sorry
+  then show ?case sorry
 next
   case (lub_tprim p p1 p2 K)
   then show ?case sorry
@@ -132,7 +129,7 @@ next
   then show ?case sorry
 next
   case (glb_tvar n n1 n2 K)
-  then show ?case
+then show ?case sorry
 next
   case (glb_tvarb n n1 n2 K)
   then show ?case sorry
@@ -142,6 +139,50 @@ next
 next
   case (glb_tfun K t t1 t2 u u1 u2)
   then show ?case sorry
+next
+case (glb_tprim p p1 p2 K)
+  then show ?case sorry
+next
+  case (glb_trecord K ts ts1 ts2 s s1 s2)
+  then show ?case
+  proof (simp add: kinding_simps kinding_record_conv_all_nth)
+    have " D \<in> sigil_kind s2"
+      using assms glb_trecord.hyps
+    show "(\<forall>i<length ts. case snd (snd (ts ! i)) of Taken \<Rightarrow> K \<turnstile> fst (snd (ts ! i)) wellformed | Present \<Rightarrow> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}) \<and> D \<in> sigil_kind s2"
+      sorry
+  qed
+
+    apply (simp add: kinding_simps kinding_record_conv_all_nth)
+    apply (rule conjI)
+     prefer 2
+    using assms
+    (*
+    apply -
+     apply (rule allI, rule impI)
+     apply (case_tac "snd (snd (ts ! i)) = Taken")
+      apply (clarsimp simp add: list_all3_conv_all_nth)
+    using kinding_to_wellformedD(1) type_wellformed_pretty_def apply blast
+     apply (case_tac "snd (snd (ts ! i)) = Present")
+      apply (clarsimp simp add: list_all3_conv_all_nth)
+    using sup_record_state.elims apply blast
+  proof (simp add: kinding_simps kinding_record_conv_all_nth)
+  *)
+    sorry
+next
+  case (glb_tsum K ts ts1 ts2)
+  then show ?case
+  proof (simp add: kinding_simps kinding_variant_conv_all_nth)
+    have "\<And>i. i < length ts \<Longrightarrow> snd (snd (ts ! i)) = Unchecked \<or> snd (snd (ts ! i)) = Checked"
+      using variant_state.exhaust by blast
+    moreover have "\<And>i. i < length ts \<Longrightarrow> snd (snd (ts ! i)) = Checked \<Longrightarrow> K \<turnstile> fst (snd (ts ! i)) wellformed"
+      by (metis (no_types, lifting) glb_tsum.hyps(1) kinding_iff_wellformed(1) list_all3_conv_all_nth)
+    moreover have "\<And>i. i < length ts \<Longrightarrow> snd (snd (ts ! i)) = Unchecked \<Longrightarrow> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}"
+      by (metis (mono_tags, lifting) glb_tsum.hyps(1) list_all3_conv_all_nth)
+    ultimately show "\<forall>i<length ts. case snd (snd (ts ! i)) of Checked \<Rightarrow> K \<turnstile> fst (snd (ts ! i)) wellformed | Unchecked \<Rightarrow> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}"
+      by force
+  qed
+qed (simp add: kinding_simps)+
+
 next
   case (glb_trecord K ts ts1 ts2 s s1 s2)
   then show ?case
