@@ -91,8 +91,32 @@ inductive type_lub :: "kind env \<Rightarrow> type \<Rightarrow> type \<Rightarr
                 \<rbrakk> \<Longrightarrow> K \<turnstile> TSum ts \<leftarrow> TSum ts1 \<sqinter> TSum ts2"
 | glb_tunit  : "K \<turnstile> TUnit \<leftarrow> TUnit \<sqinter> TUnit"
 
+lemma test2:
+"K \<turnstile> TSum ts wellformed \<Longrightarrow> \<forall>i < length ts.  K \<turnstile> fst (snd (ts ! i)) wellformed"
+  by (simp add: list_all_length)
 
+lemma test3:
+"i < length ts \<Longrightarrow> kinding_fn K (TSum ts) \<subset> kinding_fn K (fst (snd (ts ! i)))"
+  apply (induct i)
+   apply simp
+  sorry
+  
+lemma test4:
+" \<forall>i < length ts. K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D} \<Longrightarrow>K \<turnstile> TSum ts :\<kappa> {D}"
+  sorry
 
+lemma test:
+"K \<turnstile> TSum ts :\<kappa> {D} \<Longrightarrow> \<forall>i < length ts. K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}"
+  apply (rule allI)
+  apply (rule impI)
+  apply (unfold kinding_def)
+  apply (rule conjI)
+  using test2 apply auto[1]
+  apply (erule conjE) 
+  apply simp thm List.list_ball_nth
+  apply (drule_tac xs=ts and P="\<lambda>x. D \<in> (case x of (uu_, t, Checked) \<Rightarrow> UNIV | (uu_, t, Unchecked) \<Rightarrow> kinding_fn K t)" in  List.list_ball_nth)
+  sorry
+ 
 lemma type_lub_type_glb_drop_impl_drop:
   assumes 
     "K \<turnstile> a :\<kappa> {D}"
@@ -102,6 +126,19 @@ lemma type_lub_type_glb_drop_impl_drop:
   "K \<turnstile> c \<leftarrow> a \<sqinter> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
   using assms
 proof (induct rule: type_lub_type_glb.inducts)
+  case (glb_tsum K ts ts1 ts2)
+  then show ?case
+    apply (simp add: kinding_simps kinding_variant_conv_all_nth)
+    apply (rule allI)
+    apply (rule impI)
+    apply (case_tac "snd (snd (ts ! i)) = Checked")
+     apply (clarsimp simp add: list_all3_conv_all_nth)
+     apply (erule_tac x=i in allE)+
+     apply (erule impE, simp)+
+     apply (erule conjE)
+     apply (erule impE)
+    sledgehammer
+    
 case (lub_tvar n n1 n2 K)
   then show ?case sorry
 next
@@ -175,7 +212,12 @@ next
   then show ?case
   proof (simp add: kinding_simps kinding_variant_conv_all_nth)
     have "\<And>i. i < length ts \<Longrightarrow> snd (snd (ts ! i)) = Checked \<Longrightarrow> K \<turnstile> fst (snd (ts ! i)) wellformed"
-      sorry
+      apply simp
+      using glb_tsum.hyps(1)
+      apply -
+      apply (clarsimp simp add: list_all3_conv_all_nth)
+      
+
 show "\<forall>i<length ts. case snd (snd (ts ! i)) of Checked \<Rightarrow> K \<turnstile> fst (snd (ts ! i)) wellformed | Unchecked \<Rightarrow> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}"
   sorry
 qed
@@ -190,7 +232,6 @@ qed
     ultimately show "\<forall>i<length ts. case snd (snd (ts ! i)) of Checked \<Rightarrow> K \<turnstile> fst (snd (ts ! i)) wellformed | Unchecked \<Rightarrow> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}"
       by force
 *)
-  qed
 qed (simp add: kinding_simps)+
 
 next
