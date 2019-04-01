@@ -91,20 +91,24 @@ inductive type_lub :: "kind env \<Rightarrow> type \<Rightarrow> type \<Rightarr
                 \<rbrakk> \<Longrightarrow> K \<turnstile> TSum ts \<leftarrow> TSum ts1 \<sqinter> TSum ts2"
 | glb_tunit  : "K \<turnstile> TUnit \<leftarrow> TUnit \<sqinter> TUnit"
 
-lemma test2:
-"K \<turnstile> TSum ts wellformed \<Longrightarrow> \<forall>i < length ts.  K \<turnstile> fst (snd (ts ! i)) wellformed"
-  by (simp add: list_all_length)
-
-lemma test3:
-"i < length ts \<Longrightarrow> kinding_fn K (TSum ts) \<subset> kinding_fn K (fst (snd (ts ! i)))"
-  apply (induct i)
+(*
+(* This should not be true *)
+lemma test5:
+"\<And>i. i < length ts \<Longrightarrow> {D} \<subseteq> kinding_fn K (TSum ts) \<Longrightarrow> {D} \<subseteq> kinding_fn K (fst (snd (ts ! i)))"
+  apply (drule_tac xs=ts and P="\<lambda>x. D \<in> (case x of (uu_, t, Checked) \<Rightarrow> UNIV | (uu_, t, Unchecked) \<Rightarrow> kinding_fn K t)" in  List.list_ball_nth)
    apply simp
-  sorry
-  
-lemma test4:
-" \<forall>i < length ts. K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D} \<Longrightarrow>K \<turnstile> TSum ts :\<kappa> {D}"
+  apply simp
+  apply (subgoal_tac "\<exists>a b c. ts ! i = (a, b, c)")
+   apply (erule exE)+
+   apply simp
+   apply (case_tac "c = Unchecked")
+    apply simp
+   apply (subgoal_tac "c = Checked")
+    apply simp
+
   sorry
 
+(* This should not be true *)
 lemma test:
 "K \<turnstile> TSum ts :\<kappa> {D} \<Longrightarrow> \<forall>i < length ts. K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}"
   apply (rule allI)
@@ -115,8 +119,92 @@ lemma test:
   apply (erule conjE) 
   apply simp thm List.list_ball_nth
   apply (drule_tac xs=ts and P="\<lambda>x. D \<in> (case x of (uu_, t, Checked) \<Rightarrow> UNIV | (uu_, t, Unchecked) \<Rightarrow> kinding_fn K t)" in  List.list_ball_nth)
+   apply simp
+  
   sorry
- 
+*)
+
+lemma type_lub_type_glb_idem:
+  assumes "K \<turnstile> t wellformed"
+  shows
+    "K \<turnstile> t \<leftarrow> t \<squnion> t"
+    "K \<turnstile> t \<leftarrow> t \<sqinter> t"
+  using assms
+proof (induct t)
+  case (TSum ts)
+  moreover assume ts_wellformed: "K \<turnstile> TSum ts wellformed"
+  ultimately show
+    "K \<turnstile> TSum ts \<leftarrow> TSum ts \<squnion> TSum ts"
+    "K \<turnstile> TSum ts \<leftarrow> TSum ts \<sqinter> TSum ts"
+    by (fastforce simp add: list_all3_same list_all_iff intro!: type_lub_type_glb.intros)+
+next
+  case (TRecord ts s)
+  moreover assume ts_wellformed: "K \<turnstile> TRecord ts s wellformed"
+  ultimately show
+  "K \<turnstile> TRecord ts s \<leftarrow> TRecord ts s \<squnion> TRecord ts s"
+  "K \<turnstile> TRecord ts s \<leftarrow> TRecord ts s \<sqinter> TRecord ts s"
+     apply -
+     apply (rule_tac lub_trecord)
+           apply (metis (no_types, lifting) fsts.intros wellformed_record_wellformed_elem list_all3_same snds.intros surjective_pairing)
+          apply (simp add: list_all3_same)
+         apply (simp+)[5]
+    apply (rule_tac glb_trecord)
+          apply (metis (no_types, lifting) fsts.intros wellformed_record_wellformed_elem list_all3_same snds.intros surjective_pairing)
+         apply (simp add: list_all3_same)
+    by (simp+)[5]
+qed (fastforce intro!: type_lub_type_glb.intros)+
+
+lemma type_lub_type_glb_commut:
+  shows
+  "K \<turnstile> c \<leftarrow> a \<squnion> b \<Longrightarrow> K \<turnstile> c \<leftarrow> b \<squnion> a"
+  "K \<turnstile> c \<leftarrow> a \<sqinter> b \<Longrightarrow> K \<turnstile> c \<leftarrow> b \<sqinter> a"
+proof (induct rule: type_lub_type_glb.inducts)
+  case (lub_trecord K ts ts1 ts2 s s1 s2)
+  then show ?case
+    apply (intro type_lub_type_glb.intros)
+          apply (clarsimp simp add: list_all3_conv_all_nth)
+         apply (clarsimp simp add: list_all3_conv_all_nth, metis sup_commute)
+        apply simp
+       apply simp
+      apply simp
+     apply simp
+    apply simp
+    done
+next
+  case (lub_tsum K ts ts1 ts2)
+  then show ?case
+    by (simp add: list_all3_conv_all_nth sup_commute type_lub_type_glb.lub_tsum)
+next
+  case (glb_trecord K ts ts1 ts2 s s1 s2)
+  then show ?case
+    apply (intro type_lub_type_glb.intros)
+          apply (clarsimp simp add: list_all3_conv_all_nth)
+         apply (clarsimp simp add: list_all3_conv_all_nth, metis inf_commute)
+        apply simp
+       apply simp
+      apply simp
+     apply simp
+    apply simp
+    done
+next
+  case (glb_tsum K ts ts1 ts2)
+  then show ?case
+    by (simp add: inf_sup_aci(1) list_all3_conv_all_nth type_lub_type_glb.glb_tsum)
+qed (fastforce intro!: type_lub_type_glb.intros)+
+
+
+lemma type_lub_type_glb_wellformed:
+  assumes
+    "K \<turnstile> t1 wellformed"
+    "K \<turnstile> t2 wellformed"
+  shows
+    "K \<turnstile> t \<leftarrow> t1 \<squnion> t2 \<Longrightarrow> K \<turnstile> t wellformed"
+    "K \<turnstile> t \<leftarrow> t1 \<sqinter> t2 \<Longrightarrow> K \<turnstile> t wellformed"
+  using assms
+proof (induct rule: type_lub_type_glb.inducts)
+qed (auto simp add: list_all_length list_all3_conv_all_nth)
+
+
 lemma type_lub_type_glb_drop_impl_drop:
   assumes 
     "K \<turnstile> a :\<kappa> {D}"
@@ -128,17 +216,28 @@ lemma type_lub_type_glb_drop_impl_drop:
 proof (induct rule: type_lub_type_glb.inducts)
   case (glb_tsum K ts ts1 ts2)
   then show ?case
+  proof (simp add: kinding_simps kinding_variant_conv_all_nth)
+  qed
+    apply simp
     apply (simp add: kinding_simps kinding_variant_conv_all_nth)
-    apply (rule allI)
-    apply (rule impI)
-    apply (case_tac "snd (snd (ts ! i)) = Checked")
-     apply (clarsimp simp add: list_all3_conv_all_nth)
-     apply (erule_tac x=i in allE)+
-     apply (erule impE, simp)+
-     apply (erule conjE)
-     apply (erule impE)
-    sledgehammer
-    
+    apply (clarsimp simp add: list_all3_conv_all_nth)
+    apply (erule_tac x=i in allE, erule impE, simp)+
+    apply (erule conjE)
+    apply (case_tac "snd (snd (ts1 ! i)) = Checked")
+     apply (case_tac "snd (snd (ts2 ! i)) = Checked")
+      apply (metis inf_variant_state.simps(1) type_lub_type_glb_wellformed(2) variant_state.simps(3))
+     apply (subgoal_tac "snd (snd (ts2 ! i)) = Unchecked")
+      apply simp
+    using kinding_to_wellformedD(1) type_lub_type_glb_wellformed(2) type_wellformed_pretty_def apply blast
+    using variant_state.exhaust apply blast
+    apply (subgoal_tac "snd (snd (ts1 ! i)) = Unchecked")
+     apply (case_tac "snd (snd (ts2 ! i)) = Checked")
+      apply simp
+    using kinding_to_wellformedD(1) type_lub_type_glb_wellformed(2) type_wellformed_pretty_def apply blast
+     apply (case_tac "snd (snd (ts2 ! i)) = Unchecked")
+    apply simp
+    using variant_state.exhaust apply blast
+    using variant_state.exhaust by blast
 case (lub_tvar n n1 n2 K)
   then show ?case sorry
 next
@@ -260,86 +359,7 @@ next
     apply (blast intro: variant_state.exhaust)
 *)
     sorry
-  qed (simp add: kinding_simps)+
-
-lemma type_lub_type_glb_wellformed:
-  assumes
-    "K \<turnstile> t1 wellformed"
-    "K \<turnstile> t2 wellformed"
-  shows
-    "K \<turnstile> t \<leftarrow> t1 \<squnion> t2 \<Longrightarrow> K \<turnstile> t wellformed"
-    "K \<turnstile> t \<leftarrow> t1 \<sqinter> t2 \<Longrightarrow> K \<turnstile> t wellformed"
-  using assms
-proof (induct rule: type_lub_type_glb.inducts)
-qed (auto simp add: list_all_length list_all3_conv_all_nth)
-
-lemma type_lub_type_glb_idem:
-  assumes "K \<turnstile> t wellformed"
-  shows
-    "K \<turnstile> t \<leftarrow> t \<squnion> t"
-    "K \<turnstile> t \<leftarrow> t \<sqinter> t"
-  using assms
-proof (induct t)
-  case (TSum ts)
-  moreover assume ts_wellformed: "K \<turnstile> TSum ts wellformed"
-  ultimately show
-    "K \<turnstile> TSum ts \<leftarrow> TSum ts \<squnion> TSum ts"
-    "K \<turnstile> TSum ts \<leftarrow> TSum ts \<sqinter> TSum ts"
-    by (fastforce simp add: list_all3_same list_all_iff intro!: type_lub_type_glb.intros)+
-next
-  case (TRecord ts s)
-  moreover assume ts_wellformed: "K \<turnstile> TRecord ts s wellformed"
-  ultimately show
-  "K \<turnstile> TRecord ts s \<leftarrow> TRecord ts s \<squnion> TRecord ts s"
-  "K \<turnstile> TRecord ts s \<leftarrow> TRecord ts s \<sqinter> TRecord ts s"
-     apply -
-     apply (rule_tac lub_trecord)
-           apply (metis (no_types, lifting) fsts.intros wellformed_record_wellformed_elem list_all3_same snds.intros surjective_pairing)
-          apply (simp add: list_all3_same)
-         apply (simp+)[5]
-    apply (rule_tac glb_trecord)
-          apply (metis (no_types, lifting) fsts.intros wellformed_record_wellformed_elem list_all3_same snds.intros surjective_pairing)
-         apply (simp add: list_all3_same)
-    by (simp+)[5]
-qed (fastforce intro!: type_lub_type_glb.intros)+
-
-lemma type_lub_type_glb_commut:
-  shows
-  "K \<turnstile> c \<leftarrow> a \<squnion> b \<Longrightarrow> K \<turnstile> c \<leftarrow> b \<squnion> a"
-  "K \<turnstile> c \<leftarrow> a \<sqinter> b \<Longrightarrow> K \<turnstile> c \<leftarrow> b \<sqinter> a"
-proof (induct rule: type_lub_type_glb.inducts)
-  case (lub_trecord K ts ts1 ts2 s s1 s2)
-  then show ?case
-    apply (intro type_lub_type_glb.intros)
-          apply (clarsimp simp add: list_all3_conv_all_nth)
-         apply (clarsimp simp add: list_all3_conv_all_nth, metis sup_commute)
-        apply simp
-       apply simp
-      apply simp
-     apply simp
-    apply simp
-    done
-next
-  case (lub_tsum K ts ts1 ts2)
-  then show ?case
-    by (simp add: list_all3_conv_all_nth sup_commute type_lub_type_glb.lub_tsum)
-next
-  case (glb_trecord K ts ts1 ts2 s s1 s2)
-  then show ?case
-    apply (intro type_lub_type_glb.intros)
-          apply (clarsimp simp add: list_all3_conv_all_nth)
-         apply (clarsimp simp add: list_all3_conv_all_nth, metis inf_commute)
-        apply simp
-       apply simp
-      apply simp
-     apply simp
-    apply simp
-    done
-next
-  case (glb_tsum K ts ts1 ts2)
-  then show ?case
-    by (simp add: inf_sup_aci(1) list_all3_conv_all_nth type_lub_type_glb.glb_tsum)
-qed (fastforce intro!: type_lub_type_glb.intros)+
+qed (simp add: kinding_simps)+
 
 lemma type_lub_type_glb_absorb:
   shows
