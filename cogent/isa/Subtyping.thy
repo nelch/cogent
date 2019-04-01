@@ -204,11 +204,9 @@ lemma type_lub_type_glb_wellformed:
 proof (induct rule: type_lub_type_glb.inducts)
 qed (auto simp add: list_all_length list_all3_conv_all_nth)
 
-
 lemma type_lub_type_glb_drop_impl_drop:
   assumes 
-    "K \<turnstile> a :\<kappa> {D}"
-    "K \<turnstile> b :\<kappa> {D}"
+    "K \<turnstile> a :\<kappa> {D} \<or> K \<turnstile> b :\<kappa> {D}"
   shows
   "K \<turnstile> c \<leftarrow> a \<squnion> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
   "K \<turnstile> c \<leftarrow> a \<sqinter> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
@@ -216,51 +214,79 @@ lemma type_lub_type_glb_drop_impl_drop:
 proof (induct rule: type_lub_type_glb.inducts)
   case (glb_tsum K ts ts1 ts2)
   then show ?case
-  proof (simp add: kinding_simps kinding_variant_conv_all_nth)
-  qed
-    apply simp
     apply (simp add: kinding_simps kinding_variant_conv_all_nth)
     apply (clarsimp simp add: list_all3_conv_all_nth)
     apply (erule_tac x=i in allE, erule impE, simp)+
-    apply (erule conjE)
     apply (case_tac "snd (snd (ts1 ! i)) = Checked")
      apply (case_tac "snd (snd (ts2 ! i)) = Checked")
       apply (metis inf_variant_state.simps(1) type_lub_type_glb_wellformed(2) variant_state.simps(3))
      apply (subgoal_tac "snd (snd (ts2 ! i)) = Unchecked")
-      apply simp
-    using kinding_to_wellformedD(1) type_lub_type_glb_wellformed(2) type_wellformed_pretty_def apply blast
-    using variant_state.exhaust apply blast
+      apply (simp, meson kinding_defs(1) type_lub_type_glb_wellformed(2) type_wellformed_pretty_def)
+     apply (blast intro: variant_state.exhaust)
     apply (subgoal_tac "snd (snd (ts1 ! i)) = Unchecked")
      apply (case_tac "snd (snd (ts2 ! i)) = Checked")
-      apply simp
-    using kinding_to_wellformedD(1) type_lub_type_glb_wellformed(2) type_wellformed_pretty_def apply blast
+      apply (simp, meson kinding_defs(1) type_lub_type_glb_wellformed(2) type_wellformed_pretty_def)
      apply (case_tac "snd (snd (ts2 ! i)) = Unchecked")
-    apply simp
-    using variant_state.exhaust apply blast
-    using variant_state.exhaust by blast
-case (lub_tvar n n1 n2 K)
-  then show ?case sorry
-next
-  case (lub_tvarb n n1 n2 K)
-  then show ?case sorry
-next
-  case (lub_tcon n n1 n2 s s1 s2 ts ts1 ts2 K)
-  then show ?case sorry
+      apply (simp, blast intro: variant_state.exhaust)
+    apply (blast intro: variant_state.exhaust)
+    done
 next
   case (lub_tfun K t t1 t2 u u1 u2)
-  then show ?case sorry
-next
-  case (lub_tprim p p1 p2 K)
-  then show ?case sorry
+  then show ?case 
+    by (meson kinding_simps(4) type_lub_type_glb_wellformed(1) type_lub_type_glb_wellformed(2))
 next
   case (lub_trecord K ts ts1 ts2 s s1 s2)
-  then show ?case sorry
-next
-  case (lub_tprod K t t1 t2 u u1 u2)
-  then show ?case sorry
+  then show ?case 
+    apply (simp add: kinding_simps kinding_record_conv_all_nth)
+    apply (clarsimp simp add: list_all3_conv_all_nth)
+    apply (erule_tac x=i in allE, erule impE, simp)+
+    apply (case_tac "snd (snd (ts1 ! i)) = Taken")
+     apply (case_tac "snd (snd (ts2 ! i)) = Taken")
+      apply (metis record_state.simps(3) sup_record_state.simps(1) type_lub_type_glb_wellformed(1))
+     apply (metis kinding_to_wellformedD(1) record_state.simps(3) sup_record_state.simps(1))
+    apply (subgoal_tac "snd (snd (ts1 ! i)) = Present")
+     apply (case_tac "snd (snd (ts2 ! i)) = Taken")
+      apply (metis bot_record_state_def kinding_to_wellformedD(1) record_state.simps(3) sup_bot.left_neutral)
+     apply (subgoal_tac "snd (snd (ts2 ! i )) = Present")
+      apply simp
+     apply (blast intro: record_state.exhaust)
+    apply (blast intro: record_state.exhaust)
+    done
 next
   case (lub_tsum K ts ts1 ts2)
-  then show ?case sorry
+  then show ?case 
+    apply (simp add: kinding_simps kinding_variant_conv_all_nth)
+    apply (clarsimp simp add: list_all3_conv_all_nth)
+    apply (erule_tac x=i in allE, erule impE, simp)+
+    apply (case_tac "snd (snd (ts1 ! i)) = Unchecked")
+     apply (case_tac "snd (snd (ts2 ! i)) = Checked")
+      apply simp
+      apply (simp add: kinding_def)
+      apply (rule conjI)
+       apply (meson kinding_defs(1) type_lub_type_glb_wellformed(1) type_wellformed_pretty_def)
+      apply (erule conjE)+
+    using lub_tsum.hyps(1)
+      apply -
+      apply (simp add: list_all3_conv_all_nth)
+thm lub_tsum
+    
+   (*
+    apply (case_tac "snd (snd (ts1 ! i)) = Checked")
+     apply (case_tac "snd (snd (ts2 ! i)) = Checked")
+      apply (metis sup_variant_state.simps(3) type_lub_type_glb_wellformed(1) variant_state.simps(3))
+     apply (subgoal_tac "snd (snd (ts2 ! i)) = Unchecked")
+      apply (erule conjE)
+      apply (simp add: kinding_def)
+      apply (rule conjI)
+       apply (meson kinding_defs(1) type_lub_type_glb_wellformed(1) type_wellformed_pretty_def)
+      apply (erule conjE)
+      apply (erule impE)
+    
+      apply (subgoal_tac "snd (snd (ts1 ! i )) = Unchecked")
+       apply (case_tac "snd (snd (ts2 ! i)) = Checked")
+        apply simp
+ *)
+    sorry
 next
   case (lub_tunit K)
   then show ?case sorry
