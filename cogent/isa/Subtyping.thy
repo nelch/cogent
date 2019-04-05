@@ -123,7 +123,8 @@ lemma test:
   
   sorry
 *)
-
+value "sup Taken Present"
+value "sup Checked Unchecked"
 lemma type_lub_type_glb_idem:
   assumes "K \<turnstile> t wellformed"
   shows
@@ -205,7 +206,7 @@ qed (auto simp add: list_all_length list_all3_conv_all_nth)
 
 lemma type_lub_type_glb_drop_impl_drop:
   assumes 
-    "((K \<turnstile> a :\<kappa> {D})) \<or> ((K \<turnstile> b :\<kappa> {D}))"
+    "((K \<turnstile> a :\<kappa> {D}) \<and> (K \<turnstile> b wellformed)) \<or> ((K \<turnstile> b :\<kappa> {D}) \<and> (K \<turnstile> a wellformed))"
   shows
   "K \<turnstile> c \<leftarrow> a \<squnion> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
   "K \<turnstile> c \<leftarrow> a \<sqinter> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
@@ -213,11 +214,66 @@ lemma type_lub_type_glb_drop_impl_drop:
 proof (induct rule: type_lub_type_glb.inducts)
   case (lub_tsum K ts ts1 ts2)
   then show ?case 
-  proof (simp add: kinding_simps kinding_variant_conv_all_nth)
+    apply (simp add: kinding_simps kinding_variant_conv_all_nth)
+    apply (clarsimp simp add: list_all_length list_all3_conv_all_nth)
+    apply (case_tac "snd (snd (ts ! i))"; case_tac "snd (snd (ts1 ! i))"; case_tac "snd (snd (ts2 ! i))"; clarsimp; erule disjE; auto)
+    
+
+    sorry
 next
   case (lub_tfun K t t1 t2 u u1 u2)
   then show ?case 
     by (metis kinding_def kinding_fn.simps(4) kinding_simps(4) type_lub_type_glb_wellformed(1) type_lub_type_glb_wellformed(2))
+next
+  case (glb_trecord K ts ts1 ts2 s s1 s2)
+  then show ?case
+     proof (simp add: kinding_simps kinding_record_conv_all_nth)
+    have assms1:
+    "(K \<turnstile> TRecord ts1 s1 wellformed) \<and> (K \<turnstile> TRecord ts2 s2 wellformed)"
+      using kinding_to_wellformedD(1) glb_trecord.prems by blast
+    have assms2:
+    "(K \<turnstile> TRecord ts1 s1 :\<kappa> {D}) \<or> (K \<turnstile> TRecord ts2 s2 :\<kappa> {D})"
+      using glb_trecord.prems by blast
+    have assms3:
+      "K \<turnstile> TRecord ts s \<leftarrow> TRecord ts1 s1 \<sqinter>  TRecord ts2 s2"
+      by (metis (no_types, lifting) glb_trecord.hyps list_all3_mono type_lub_type_glb.glb_trecord)
+     moreover {
+      fix i :: nat 
+      assume tsLength: "i < length ts"
+      moreover obtain c t t1 t2 b b1 b2 where dummy:
+        "(c, t, b) = (ts ! i)" 
+        "(c, t1, b1) = (ts1 ! i)"
+        "(c, t2, b2) = (ts2 ! i)"
+        by (metis (no_types, hide_lams) length_map glb_trecord.hyps(3) glb_trecord.hyps(4) nth_map surjective_pairing tsLength)
+      have tsWellformed: "K \<turnstile> TRecord ts s wellformed"
+        using assms1 assms3 type_lub_type_glb_wellformed(2) by blast
+      have tWellformed: "K \<turnstile> t wellformed"
+        by (metis dummy(1) nth_mem tsLength tsWellformed wellformed_record_wellformed_elem)
+      have RecordExhaust: "(b = Taken \<or> b = Present) \<and> (b1 = Taken \<or> b1 = Present) \<and> (b2 = Taken \<or> b2 = Present)"
+        using record_state.exhaust by blast
+      have PresentIff: "(b = Taken) \<longleftrightarrow> (b1 = Taken) \<and> (b2 = Taken)"
+        using glb_trecord.hyps(2)
+        apply (clarsimp simp add: list_all3_conv_all_nth)
+        by (metis RecordExhaust dummy inf_commute inf_record_state.simps(2) inf_record_state.simps(3) inf_sup_absorb snd_conv sup_record_state.simps(3) tsLength)
+      have "type_wellformed (length K) t1"
+        by (metis assms1 dummy(2) length_map glb_trecord.hyps(3) nth_mem tsLength type_wellformed_pretty_def wellformed_record_wellformed_elem)
+      moreover have "type_wellformed (length K) t2"
+        by (metis assms1 dummy(3) length_map glb_trecord.hyps(3) glb_trecord.hyps(4) nth_mem tsLength type_wellformed_pretty_def wellformed_record_wellformed_elem)
+      moreover {
+        assume "K \<turnstile> TRecord ts1 s1 :\<kappa> {D}"
+        moreover have "b1 = Present \<Longrightarrow> K \<turnstile> t1 :\<kappa> {D}"
+          using kinding_simps kinding_record_conv_all_nth
+          by (metis calculation dummy(2) eq_snd_iff fst_conv length_map glb_trecord.hyps(3) record_state.simps(4) tsLength)
+        moreover have  "(K \<turnstile> t1 :\<kappa> {D}) \<and> (type_wellformed (length K) t2) \<longrightarrow> K \<turnstile> t :\<kappa> {D}"
+          using glb_trecord.hyps(1)
+          apply (clarsimp simp add: list_all3_conv_all_nth)
+          by (metis dummy fst_conv snd_conv tsLength)
+        moreover have "b1 = Taken \<Longrightarrow> b2 = Taken \<Longrightarrow>  K \<turnstile> t wellformed"
+          using tWellformed by blast
+        moreover have "(K \<turnstile> t1 :\<kappa> {D}) \<and> (K \<turnstile> t2 :\<kappa> {D})  \<Longrightarrow>  b = inf b1 b2"
+      }
+  qed
+  sorry
 next
   case (lub_trecord K ts ts1 ts2 s s1 s2)
   then show ?case 
