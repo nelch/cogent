@@ -205,7 +205,7 @@ qed (auto simp add: list_all_length list_all3_conv_all_nth)
 
 lemma type_lub_type_glb_drop_impl_drop:
   assumes 
-    "((K \<turnstile> a :\<kappa> {D})) \<or> ((K \<turnstile> b :\<kappa> {D}))"
+    "((K \<turnstile> a :\<kappa> {D}) \<and> (K \<turnstile> b wellformed)) \<or> ((K \<turnstile> b :\<kappa> {D}) \<and> (K \<turnstile> a wellformed))"
   shows
   "K \<turnstile> c \<leftarrow> a \<squnion> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
   "K \<turnstile> c \<leftarrow> a \<sqinter> b \<Longrightarrow> K \<turnstile> c :\<kappa> {D}"
@@ -213,7 +213,17 @@ lemma type_lub_type_glb_drop_impl_drop:
 proof (induct rule: type_lub_type_glb.inducts)
   case (lub_tsum K ts ts1 ts2)
   then show ?case 
-  proof (simp add: kinding_simps kinding_variant_conv_all_nth)
+    apply (simp add: kinding_simps kinding_variant_conv_all_nth)
+    apply (clarsimp simp add: list_all_length list_all3_conv_all_nth)
+    apply (case_tac "snd (snd (ts ! i))"; case_tac "snd (snd (ts1 ! i))"; case_tac "snd (snd (ts2 ! i))"; clarsimp)
+
+       defer
+    apply (erule disjE; clarsimp)
+        apply (drule_tac x=i in spec)+
+        apply clarsimp
+    apply (clarsimp simp add: kinding_defs)
+
+    sorry
 next
   case (lub_tfun K t t1 t2 u u1 u2)
   then show ?case 
