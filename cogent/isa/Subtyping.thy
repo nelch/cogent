@@ -562,6 +562,7 @@ next
     sorry
 qed (simp add: kinding_simps)+
 
+
 lemma type_lub_type_glb_absorb:
   shows
     "K \<turnstile> c \<leftarrow> a \<squnion> b \<Longrightarrow> K \<turnstile> a \<leftarrow> a \<sqinter> c"
@@ -570,98 +571,66 @@ proof (induct rule: type_lub_type_glb.inducts)
   case (lub_tcon n n1 n2 s s1 s2 ts ts1 ts2)
   then show ?case by (force intro!: type_lub_type_glb.intros simp add: list_all3_conv_all_nth)
 next
-  case (lub_trecord ts ts1 ts2 s s1 s2)
-(*
+  case (lub_trecord K ts ts1 ts2 s s1 s2)
   then show ?case
-  proof (intro type_lub_type_glb.intros)
-    fix n t1' b1' t1 b1 t b
-    assume :
-      "(n, t1, b1) \<in> set ts1"
-      "(n, t1', b1') \<in> set ts1"
-      "(n, t, b) \<in> set ts"
-    moreover obtain t2 b2 where "(n, t2, b2) \<in> set ts2"
-      using lub_trecord.hyps assms1
-      by (metis (mono_tags, hide_lams) fst_conv image_iff surjective_pairing)
-    ultimately have
-      "(t \<leftarrow> t1 \<squnion> t2 \<and> t1 \<leftarrow> t1 \<sqinter> t) \<and> b = inf b1 b2"
-      using lub_trecord.hyps by blast+
-    then show "t1' \<leftarrow> t1 \<sqinter> t \<and> b1' = sup b1 b"
-      using lub_trecord.hyps assms1 distinct_fst[where xs=ts1] by fastforce
-  qed auto
-*)
-  show ?case
-    sorry
-next
-  case (lub_tsum ts ts1 ts2)
-(*
-  then show ?case
-  proof (intro type_lub_type_glb.intros)
-    fix n t1' b1' t1 b1 t b
-    assume assms1:
-      "(n, t1, b1) \<in> set ts1"
-      "(n, t1', b1') \<in> set ts1"
-      "(n, t, b) \<in> set ts"
-    moreover obtain t2 b2 where "(n, t2, b2) \<in> set ts2"
-      using lub_tsum.hyps assms1
-      by (metis (mono_tags, hide_lams) fst_conv image_iff surjective_pairing)
-    ultimately have
-      "(t \<leftarrow> t1 \<squnion> t2 \<and> t1 \<leftarrow> t1 \<sqinter> t) \<and> b = inf b1 b2"
-      using lub_tsum.hyps by blast+
-    then show "t1' \<leftarrow> t1 \<sqinter> t \<and> b1' = sup b1 b"
-      using lub_tsum.hyps assms1 distinct_fst[where xs=ts1] by fastforce
+  proof (intro type_lub_type_glb.intros; clarsimp simp add: list_all3_conv_all_nth)
+    fix i
+    presume
+      "let b = snd (snd (ts ! i)); b1 = snd (snd (ts1 ! i)); b2 = snd (snd (ts2 ! i))
+        in if (K \<turnstile> fst (snd (ts1 ! i)) :\<kappa> {D}) \<and> (K \<turnstile> fst (snd (ts2 ! i)) :\<kappa> {D}) then b = sup b1 b2 else b = b1 \<and> b1 = b2"
+      "K \<turnstile> fst (snd (ts ! i)) \<leftarrow> fst (snd (ts1 ! i)) \<squnion> fst (snd (ts2 ! i))"
+      "K \<turnstile> fst (snd (ts1 ! i)) \<leftarrow> fst (snd (ts1 ! i)) \<sqinter> fst (snd (ts ! i))"
+    then show "let b = snd (snd (ts1 ! i)); b2 = snd (snd (ts ! i))
+              in (K \<turnstile> fst (snd (ts1 ! i)) :\<kappa> {D} \<and> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D} \<longrightarrow> b = inf b b2) \<and>
+                 ((K \<turnstile> fst (snd (ts1 ! i)) :\<kappa> {D} \<longrightarrow> \<not> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}) \<longrightarrow> b = b2)"
+      apply (case_tac "K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}";
+          case_tac "K \<turnstile> fst (snd (ts1 ! i)) :\<kappa> {D}";
+          case_tac "K \<turnstile> fst (snd (ts2 ! i)) :\<kappa> {D}"; clarsimp)
+            apply (metis inf.idem)
+           apply metis
+          apply metis
+         defer
+         apply metis
+        apply metis
+       apply metis
+
+
+      sorry
   qed auto
 next
-  case (glb_tcon n n1 n2 s s1 s2 ts ts1 ts2)
-  then show ?case by (force intro!: type_lub_type_glb.intros simp add: list_all3_conv_all_nth)
-*)
-  show ?case
-    sorry
-next
-  case (glb_trecord ts ts1 ts2 s s1 s2)
-(*
+  case (lub_tsum K ts ts1 ts2)
   then show ?case
-  proof (intro type_lub_type_glb.intros)
-    fix n t1' b1' t1 b1 t b
-    assume assms1:
-      "(n, t1, b1) \<in> set ts1"
-      "(n, t1', b1') \<in> set ts1"
-      "(n, t, b) \<in> set ts"
-    moreover obtain t2 b2 where "(n, t2, b2) \<in> set ts2"
-      using glb_trecord.hyps assms1
-      by (metis (mono_tags, hide_lams) fst_conv image_iff surjective_pairing)
-    ultimately have
-      "(t \<leftarrow> t1 \<sqinter> t2 \<and> t1 \<leftarrow> t1 \<squnion> t) \<and> b = sup b1 b2"
-      using glb_trecord.hyps by blast+
-    then show "t1' \<leftarrow> t1 \<squnion> t \<and> b1' = inf b1 b"
-      using glb_trecord.hyps assms1 distinct_fst[where xs=ts1] by fastforce
+    by (force intro!: type_lub_type_glb.intros simp add: list_all3_conv_all_nth)
+next
+  case (glb_trecord K ts ts1 ts2 s s1 s2)
+  then show ?case
+  proof (intro type_lub_type_glb.intros; clarsimp simp add: list_all3_conv_all_nth)
+    fix i
+    presume
+      "let b = snd (snd (ts ! i)); b1 = snd (snd (ts1 ! i)); b2 = snd (snd (ts2 ! i))
+        in if (K \<turnstile> fst (snd (ts1 ! i)) :\<kappa> {D}) \<and> (K \<turnstile> fst (snd (ts2 ! i)) :\<kappa> {D}) then b = inf b1 b2 else b = b1 \<and> b1 = b2"
+      "K \<turnstile> fst (snd (ts ! i)) \<leftarrow> fst (snd (ts1 ! i)) \<sqinter> fst (snd (ts2 ! i))"
+      "K \<turnstile> fst (snd (ts1 ! i)) \<leftarrow> fst (snd (ts1 ! i)) \<squnion> fst (snd (ts ! i))"
+    then show "let b = snd (snd (ts1 ! i)); b2 = snd (snd (ts ! i))
+              in (K \<turnstile> fst (snd (ts1 ! i)) :\<kappa> {D} \<and> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D} \<longrightarrow> b = sup b b2) \<and>
+                 ((K \<turnstile> fst (snd (ts1 ! i)) :\<kappa> {D} \<longrightarrow> \<not> K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}) \<longrightarrow> b = b2)"
+      apply (case_tac "K \<turnstile> fst (snd (ts ! i)) :\<kappa> {D}";
+          case_tac "K \<turnstile> fst (snd (ts1 ! i)) :\<kappa> {D}";
+          case_tac "K \<turnstile> fst (snd (ts2 ! i)) :\<kappa> {D}"; clarsimp)
+             apply (metis sup.idem)
+            apply metis
+          apply metis
+          defer
+          apply metis
+         apply metis
+        apply metis
+      sorry
   qed auto
-*)
-  show ?case
-    sorry
 next
   case (glb_tsum ts ts1 ts2)
-(*
   then show ?case
-  proof (intro type_lub_type_glb.intros)
-    fix n t1' b1' t1 b1 t b
-    assume assms1:
-      "(n, t1, b1) \<in> set ts1"
-      "(n, t1', b1') \<in> set ts1"
-      "(n, t, b) \<in> set ts"
-    moreover obtain t2 b2 where "(n, t2, b2) \<in> set ts2"
-      using glb_tsum.hyps assms1 
-      by (metis (mono_tags, hide_lams) fst_conv image_iff surjective_pairing)
-    ultimately have
-      "(t \<leftarrow> t1 \<sqinter> t2 \<and> t1 \<leftarrow> t1 \<squnion> t) \<and> b = sup b1 b2"
-      using glb_tsum.hyps by blast+
-    then show "t1' \<leftarrow> t1 \<squnion> t \<and> b1' = inf b1 b"
-      using glb_tsum.hyps assms1 distinct_fst[where xs=ts1] by fastforce
-  qed auto
-*)
-  show ?case
-    sorry
+    by (force intro!: type_lub_type_glb.intros simp add: list_all3_conv_all_nth)
 qed (force intro: type_lub_type_glb.intros)+
-
 
 lemma type_lub_type_glb_order_correct: "K \<turnstile> a \<leftarrow> a \<squnion> b \<longleftrightarrow> K \<turnstile> b \<leftarrow> a \<sqinter> b"
   by (auto intro: type_lub_type_glb_absorb type_lub_type_glb_commut)
